@@ -1,9 +1,3 @@
-library(dplyr)
-library(stringr)
-library(tidyr)
-library(reshape2)
-library(ggplot2)
-
 ### mixcr analysis
 
 rm(list = ls()) # clear workspace
@@ -22,15 +16,47 @@ combine_mixcr_clns <- function(mixcrDir) {
     
     # Build and use Unix commands
     mixcrCombinedFile <- file.path(mixcrDir, "compiled_mixcr_output.txt")
-    
-    headerCmd <- sprintf("head -1 %s > %s", mixcrTmpFile, mixcrCombinedFile)
-    system(headerCmd)
-    
-    compileCmd <- sprintf("grep '*' %s/*Clns.txt >> %s",
-                          mixcrDir, mixcrCombinedFile)
-    system(compileCmd)
-    
+    if (!file.exists(mixcrCombinedFile)) {
+        headerCmd <- sprintf("head -1 %s > %s", mixcrTmpFile, mixcrCombinedFile)
+        system(headerCmd)
+        
+        compileCmd <- sprintf("grep '*' %s/*Clns.txt >> %s",
+                              mixcrDir, mixcrCombinedFile)
+        system(compileCmd)
+    }
+
     return(mixcrCombinedFile)
+}
+
+# Function to compile and format IMGT results using R
+compile_imgt_clns <- function(imgtDir) {
+    # Select summary file
+    summaryFile <- list.files(imgtDir, full.names = TRUE) %>% 
+        str_extract(".*Summary.*") %>% 
+        na.omit()
+    
+    # Build and use Unix commands
+    imgtFile <- file.path(imgtDir, "compiled_imgt_output.txt")
+    
+    if (!file.exists(imgtFile)) {
+        imgtSummary <- read.delim(summaryFile, stringsAsFactors = FALSE)
+        
+        imgtCompiled <- imgtSummary %>% 
+            filter(Functionality == "productive") %>% 
+            select(Sequence.ID, V.GENE.and.allele, J.GENE.and.allele, 
+                   AA.JUNCTION) %>% 
+            transmute(libID = str_extract(Sequence.ID, "lib[0-9]+"),
+                      V.GENE = str_extract(V.GENE.and.allele, 
+                                           "TR.*?(?=(\\*))"),
+                      J.GENE = str_extract(J.GENE.and.allele, 
+                                           "TR.*?(?=(\\*))"),
+                      JUNCTION = AA.JUNCTION)
+        
+        write.table(imgtCompiled, imgtFile, 
+                    sep = "\t", quote = FALSE, row.names = FALSE)
+    }
+    
+    return(imgtFile)
 }
 
 # Function to read in MiXCR data then extract & format variables
@@ -97,16 +123,18 @@ compare_tcrs <- function(imgtClns, mixcrClns, maxCutoff = 40) {
         unite_("cloneStr", c("libID", "JUNCTION"), sep = "::")
     
     clnCountRange <- seq(0, maxCutoff, 1)
+    # mixcrAll <- rep(0, maxCutoff + 1)
     tcrBoth <- rep(0, maxCutoff + 1)
     tcrImgt <- rep(0, maxCutoff + 1)
     tcrMixcr <- rep(0, maxCutoff + 1)
     
     for (cutoff in clnCountRange) {
         mixcrTcrAll <- mixcrClns %>% 
-            filter(clnCount > cutoff) %>% 
+            filter(clnCount >= cutoff) %>% 
             select(-clnCount) %>% 
             unite_("cloneStr", c("libID", "junction"), sep = "::")
         
+        # mixcrAll[cutoff+1] <- nrow(mixcrTcrAll)
         tcrBoth[cutoff+1] <- intersect(imgtTcrAll$cloneStr, 
                                        mixcrTcrAll$cloneStr) %>% length()
         tcrImgt[cutoff+1] <- setdiff(imgtTcrAll$cloneStr, 
@@ -125,13 +153,13 @@ compare_tcrs <- function(imgtClns, mixcrClns, maxCutoff = 40) {
 }
 
 # Plot overlap values over range of clone count cutoffs
-plot_tcr_mixcr <- function(mixcrClns, maxCutoff = 40) {
+plot_tcr_mixcr <- function(mixcrClns, maxCutoff = 40, cutoffLine = 25) {
     clnCountRange <- seq(0, maxCutoff, 1)
     tcrMixcr <- rep(0, maxCutoff + 1)
     
     for (cutoff in clnCountRange) {
         mixcrTcrNum <- mixcrClns %>% 
-            filter(clnCount > cutoff) %>% 
+            filter(clnCount >= cutoff) %>% 
             nrow()
         
         tcrMixcr[cutoff+1] <- mixcrTcrNum
@@ -140,40 +168,29 @@ plot_tcr_mixcr <- function(mixcrClns, maxCutoff = 40) {
     mixcrClnCounts <- data_frame(cloneCount = clnCountRange,
                                  clonotypes = tcrMixcr)
     
-    cutoffVal <- mixcrClnCounts$clonotypes[which(mixcrClnCounts$cloneCount == 25)]
+    cutoffVal <- mixcrClns %>%
+        filter(clnCount >= cutoffLine) %>% 
+        nrow()
+    
     mixcrClnCounts %>% 
         ggplot(aes(x = cloneCount, y = clonotypes)) +
         geom_line(size = 1.5) +
-        geom_vline(x = 25) +
+        geom_vline(x = cutoffLine) +
         geom_hline(y = cutoffVal)
 }
 
 # Plot overlap values over range of clone count cutoffs
-plot_tcr_comp <- function(compareClns) {
+plot_tcr_comp <- function(compareClns, cutoffLine = 25) {
     compareClnsLong <- melt(compareClns, id.vars = "cloneCount", 
                             variable.name = "tcrSource", 
                             value.name = "clonotypes")
     
     compareClnsLong %>% 
         ggplot(aes(x = cloneCount, y = clonotypes)) +
-        geom_line(aes(colour = tcrSource), size = 1.5)
+        geom_line(aes(colour = tcrSource), size = 1.5) +
+        geom_vline(x = cutoffLine)
 }
 
-# Wrapper function for individual steps above
-run_comparison <- function(mixcrDir, imgtFile) {
-    imgtClns <- read.delim(imgtFile) %>% 
-        filter_imgt_clns() %>% 
-        filter(!str_detect(libID, "lib2"))
-    
-    mixcrCombinedFile <- combine_mixcr_clns(mixcrDir)
-    mixcrClns <- format_mixcr_clns(mixcrCombinedFile) %>% 
-        filter_mixcr_clns()
-    
-    compareClns <- compare_tcrs(imgtClns, mixcrClns)
-    
-    print(plot_tcr_comp(compareClns))
-    return(compareClns)
-}
 
 
 
