@@ -7,15 +7,20 @@ rm(list = ls()) # clear workspace
 # Function to combine individual * mixcrClns.txt files using unix: 1) add header
 # from one file to newfile. 2) grep contents of all files and 3) append them to
 # newfile
-combine_mixcr_clns <- function(mixcrDir) {
+combine_mixcr_clns <- function(mixcrDir, outputDir, project) {
     # Select one file to grab the column headers
-    mixcrTmpFile <- list.files(mixcrDir, full.names = TRUE) %>% 
-        str_extract(".*Clns.txt") %>% 
-        na.omit() %>% 
-        .[1]
+    mixcrTmpFile <- data_frame(file = list.files(mixcrDir, full.names = TRUE)) %>% 
+        mutate(size = file.size(file)) %>% 
+        filter(str_detect(file, "Clns.txt"),
+               size > 0) %>% 
+        slice(1) %>% 
+        select(file) %>% 
+        unlist()
     
     # Build and use Unix commands
-    mixcrCombinedFile <- file.path(mixcrDir, "compiled_mixcr_output.txt")
+    mixcrCombinedFile <- file.path(outputDir, 
+                                   paste(project, "compiled_mixcr_output.txt", 
+                                         sep = "_"))
     if (!file.exists(mixcrCombinedFile)) {
         headerCmd <- sprintf("head -1 %s > %s", mixcrTmpFile, mixcrCombinedFile)
         system(headerCmd)
@@ -29,14 +34,16 @@ combine_mixcr_clns <- function(mixcrDir) {
 }
 
 # Function to compile and format IMGT results using R
-compile_imgt_clns <- function(imgtDir) {
-    # Select summary file
-    summaryFile <- list.files(imgtDir, full.names = TRUE) %>% 
-        str_extract(".*Summary.*") %>% 
-        na.omit()
+compile_imgt_clns <- function(summaryFile, outputDir, project) {
+#     # Select summary file
+#     summaryFile <- list.files(imgtDir, full.names = TRUE) %>% 
+#         str_extract(".*Summary.*") %>% 
+#         na.omit()
     
     # Build and use Unix commands
-    imgtFile <- file.path(imgtDir, "compiled_imgt_output.txt")
+    imgtFile <- file.path(outputDir, 
+                          paste(project, "compiled_imgt_output.txt", 
+                                sep = "_"))
     
     if (!file.exists(imgtFile)) {
         imgtSummary <- read.delim(summaryFile, stringsAsFactors = FALSE)
@@ -82,6 +89,7 @@ filter_mixcr_clns <- function(mixcrClns, minCount = 0, minLength = 6) {
     
     mixcrClns <- mixcrClns %>% 
         filter(str_detect(vGene, "^((?![C-G]).)*$"),
+               str_detect(jGene, "^((?![C-G]).)*$"),
                str_detect(junction, "^C"),
                str_detect(junction, "^((?!(\\*|_)).)*$"),
                !duplicated(.[, c(1, 3:5)]),
@@ -191,7 +199,99 @@ plot_tcr_comp <- function(compareClns, cutoffLine = 25) {
         geom_vline(x = cutoffLine)
 }
 
+# Function to combine TRAV and TRBV genes into TCRs
+construct_tcrs <- function(clnsDat, cutoff = 10, method = c("mixcr", "imgt")) {
+    if (method == "mixcr") {
+        travDat <- clnsDat %>% 
+            filter(clnCount > cutoff,
+                   str_detect(vGene, "TRAV")) %>% 
+            select(-jGene) %>% 
+            rename(clnCountA = clnCount, TRAV = vGene, 
+                   TRAVjunction = junction)
+        
+        trbvDat <- clnsDat %>% 
+            filter(clnCount > cutoff,
+                   str_detect(vGene, "TRBV")) %>% 
+            select(-jGene) %>% 
+            rename(clnCountB = clnCount, TRBV = vGene,
+                   TRBVjunction = junction)
+    } else {
+        travDat <- clnsDat %>% 
+            filter(str_detect(V.GENE, "TRAV")) %>% 
+            select(-J.GENE) %>% 
+            rename(TRAV = V.GENE, TRAVjunction = JUNCTION)
+        
+        trbvDat <- clnsDat %>% 
+            filter(str_detect(V.GENE, "TRBV")) %>% 
+            select(-J.GENE) %>% 
+            rename(TRBV = V.GENE, TRBVjunction = JUNCTION)
+    }
+    
+    tcrDat <- inner_join(travDat, trbvDat, by = c("libID" = "libID"))
+    return(tcrDat)
+}
 
+
+# sankey ntwork -----------------------------------------------------------
+
+
+build_sankey_network <- function(tcrsAll, chain = c("A", "B", "both")) {
+    tcrsAll <- tcrsAll %>% 
+        mutate(tcr = str_c(TRAV, TRBV, sep = ":"),
+               value = ifelse(tcrSource == "IMGT", 0.49, 0.51))
+    
+    if (chain == "A") {
+        tcrSankey <- tcrsAll %>% 
+            select(source = libID, target = TRAV, value) %>% 
+            bind_rows(tcrsAll %>% 
+                          select(source = TRAV, target = TRAVjunction, value))
+    } else if (chain == "B") {
+        tcrSankey <- tcrsAll %>% 
+            select(source = libID, target = TRBV, value) %>% 
+            bind_rows(tcrsAll %>% 
+                          select(source = TRBV, target = TRBVjunction, value))
+    } else if (chain == "both") {
+        tcrSankey <- tcrsAll %>% 
+            select(source = libID, target = TRAV, value) %>% 
+            bind_rows(tcrsAll %>% 
+                          select(source = libID, target = TRBV, value)) %>% 
+            bind_rows(tcrsAll %>% 
+                          select(source = TRAV, target = TRAVjunction, value)) %>% 
+            bind_rows(tcrsAll %>% 
+                          select(source = TRBV, target = TRBVjunction, value))
+    } else {
+        tcrSankey <- tcrsAll %>% 
+            mutate(libID = str_c(libID, "[TRAV]", sep = " ")) %>% 
+            select(source = libID, target = TRAV, value) %>% 
+            bind_rows(tcrsAll %>% 
+                          select(source = TRAV, target = TRBV, value)) %>% 
+            bind_rows(tcrsAll %>% 
+                          mutate(libID = str_c(libID, "[TRBV]", sep = " ")) %>% 
+                          select(source = TRBV, target = libID, value)) 
+    }
+    
+}
+
+
+
+# sankey fxn --------------------------------------------------------------
+
+
+sankey_plot <- function(tcrSankey, sankeyHeight = 600) {
+    sankeyPlot <- rCharts$new()
+    sankeyPlot$setLib('~/code/github/resources/rCharts_d3_sankey/libraries/widgets/d3_sankey')
+    sankeyPlot$setTemplate(script = "~/code/github/resources/rCharts_d3_sankey/libraries/widgets/d3_sankey/layouts/tcrChart.html")
+
+    sankeyPlot$set(
+        data = tcrSankey,
+        nodeWidth = 15,
+        nodePadding = 10,
+        layout = 32,
+        width = 800,
+        height = sankeyHeight 
+    )
+    return(sankeyPlot)
+}
 
 
 
