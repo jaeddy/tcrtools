@@ -35,11 +35,6 @@ combine_mixcr_clns <- function(mixcrDir, outputDir, project) {
 
 # Function to compile and format IMGT results using R
 compile_imgt_clns <- function(summaryFile, outputDir, project) {
-#     # Select summary file
-#     summaryFile <- list.files(imgtDir, full.names = TRUE) %>% 
-#         str_extract(".*Summary.*") %>% 
-#         na.omit()
-    
     # Build and use Unix commands
     imgtFile <- file.path(outputDir, 
                           paste(project, "compiled_imgt_output.txt", 
@@ -77,8 +72,10 @@ format_mixcr_clns <- function(mixcrCombinedFile) {
                   clnCount = as.numeric(str_match(Clone.count, "(?<=:)[0-9]+")),
                   vGene = str_extract(All.V.hits,
                                       "TR[A-Z]+[0-9]*(\\-[0-9])*(DV[0-9]+)*"),
-                  jGene = str_extract(All.J.hits,
+                  vGeneScore = str_extract(All.V.hits, "(?<=\\()[0-9]+"),
+                  jGene = str_extract(All.J.hits, 
                                       "TR[A-Z]+[0-9]*(\\-[0-9][A-Z]*)*"),
+                  jGeneScore = str_extract(All.J.hits, "(?<=\\()[0-9]+"),
                   junction = as.character(AA..seq..CDR3))
     
     return(mixcrClns)
@@ -97,6 +94,20 @@ filter_mixcr_clns <- function(mixcrClns, minCount = 0, minLength = 6) {
                str_length(junction) > minLength)
     
     return(mixcrClns)
+}
+
+select_top_jxns <- function(mixcrClns) {
+    # There should be only one alpha and one beta junction for each lib; select
+    # the top hit for each lib, sorting first by clone count and second by
+    # alignment score
+    mixcrClns %>% 
+        filter(libID == "lib8472") %>% 
+        mutate(a_b = ifelse(str_detect(vGene, "TRA"), "TRA", "TRB")) %>% 
+        group_by(libID, a_b) %>% 
+        arrange(clnCount, vGeneScore) %>% 
+        slice(1) %>% 
+        ungroup() %>% 
+        select(-clnCount, -vGeneScore, -jGeneScore, -a_b)
 }
 
 # Function to plot distribution of MiXCR clone counts & junction lengths
