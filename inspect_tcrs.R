@@ -1,11 +1,7 @@
 
 # Function to combine TRAV and TRBV genes into TCRs
-construct_tcrs <- function(jxns_df, cutoff = 10, is_mixcr = TRUE) {
-    if (is_mixcr) {
-        jxns_df <- jxns_df %>% 
-            filter(cln_count > cutoff)
-    }
-    
+construct_tcrs <- function(jxns_df) {
+
     trav_df <- jxns_df %>% 
         filter(str_detect(v_gene, "TRAV")) %>% 
         select(-j_gene) %>% 
