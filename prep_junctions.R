@@ -51,7 +51,7 @@ combine_mixcr_outputs <- function(mixcr_dir, output_dir, project) {
     mixcr_tmp_file <- data_frame(
         file = list.files(mixcr_dir, full.names = TRUE)) %>% 
         mutate(size = file.size(file)) %>% 
-        filter(str_detect(file, "_clns.txt"),
+        filter(str_detect(str_to_lower(file), "clns.txt"),
                size > 0) %>% # make sure not to select empty files
         slice(1) %>% 
         select(file) %>% 
@@ -61,12 +61,13 @@ combine_mixcr_outputs <- function(mixcr_dir, output_dir, project) {
     mixcr_combined_file <- file.path(output_dir, 
                                      paste(project, "compiled_mixcr_output.txt", 
                                            sep = "_"))
+    
     if (!file.exists(mixcr_combined_file)) {
         header_cmd <- sprintf("head -1 %s > %s", mixcr_tmp_file, mixcr_combined_file)
         system(header_cmd)
         
-        compile_cmd <- sprintf("grep '*' %s/*_clns.txt >> %s",
-                              mixcr_dir, mixcr_combined_file)
+        compile_cmd <- sprintf("grep '*' %s/*lns.txt >> %s",
+                               mixcr_dir, mixcr_combined_file)
         system(compile_cmd)
     }
     
@@ -114,12 +115,20 @@ filter_imgt_jxns <- function(imgt_jxns, min_length = 6) {
 # alignment _score
 select_top_jxns <- function(mixcr_jxns) {
 
-    mixcr_jxns %>% 
+   mixcr_jxns %>% 
         mutate(a_b = ifelse(str_detect(v_gene, "TRA"), "TRA", "TRB")) %>% 
         group_by(lib_id, a_b) %>% 
         arrange(desc(cln_count), desc(v_gene_score)) %>% 
-        slice(1) %>% 
+        slice(1:2) %>% 
         ungroup() %>% 
-        select(-cln_count, -v_gene_score, -j_gene_score, -a_b)
+        group_by(lib_id, a_b) %>% 
+        mutate(count_diff = c(0, diff(cln_count)) / lag(cln_count),
+               score_diff = c(0, diff(v_gene_score)) / lag(v_gene_score),
+               best = ifelse(is.na(count_diff), TRUE, FALSE),
+               second = ifelse(a_b == "TRA" & !best &
+                                   (count_diff > -0.5 | score_diff > -0.1),
+                               TRUE, FALSE)) %>% 
+        ungroup() %>% 
+        filter(best | second) %>% 
+        select(lib_id, v_gene, j_gene, junction)
 }
-
