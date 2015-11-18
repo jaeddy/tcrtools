@@ -21,7 +21,9 @@ construct_tcrs <- function(jxns_df) {
 build_sankey_network <- function(tcrs_all, chain = c("A", "B", "both")) {
     tcrs_all <- tcrs_all %>% 
         mutate(tcr = str_c(trav_gene, trbv_gene, sep = ":"),
-               value = ifelse(tcr_source == "IMGT", 0.49, 0.51))
+               value = ifelse(tcr_source == "IMGT", 
+                              as.numeric(str_extract(lib_id, "[0-9]+")) + 0.1, 
+                              as.numeric(str_extract(lib_id, "[0-9]+")) + 0.2))
     
     if (chain == "A") {
         tcr_sankey <- tcrs_all %>% 
@@ -57,8 +59,8 @@ build_sankey_network <- function(tcrs_all, chain = c("A", "B", "both")) {
 
 build_sankey_plot <- function(tcr_sankey, sankey_height = 600) {
     sankey_plot <- rCharts$new()
-    sankey_plot$setLib('~/code/github/resources/rCharts_d3_sankey/libraries/widgets/d3_sankey')
-    sankey_plot$setTemplate(script = "~/code/github/resources/rCharts_d3_sankey/libraries/widgets/d3_sankey/layouts/tcrChart.html")
+    sankey_plot$setLib('/Users/jaeddy/code/github/resources/rCharts_d3_sankey/libraries/widgets/d3_sankey')
+    sankey_plot$setTemplate(script = "/Users/jaeddy/code/github/resources/rCharts_d3_sankey/libraries/widgets/d3_sankey/layouts/tcrChart.html")
     
     sankey_plot$set(
         data = tcr_sankey,
