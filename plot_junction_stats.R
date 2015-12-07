@@ -8,8 +8,11 @@ plot_mixcr_summary <- function(mixcr_jxns) {
         melt(measure.vars = c("log2_cln_count", "jxn_length")) %>% 
         ggplot(aes(x = value)) +
         geom_histogram() +
-        facet_wrap(~ variable)
-    print(mixcr_summary)
+        facet_wrap(~ variable, scales = "free_x") +
+        theme_gray() +
+        theme(axis.title.x = element_blank()) +
+        ylab("num_junctions")
+    return(mixcr_summary)
 }
 
 # Plot overlap values over range of clone count cutoffs
@@ -36,7 +39,8 @@ plot_mixcr_jxn_dist <- function(mixcr_jxns, max_cutoff = 40, cutoff_line = 25) {
         ggplot(aes(x = clone_count, y = num_junctions)) +
         geom_line(size = 1.5) +
         geom_vline(x = cutoff_line) +
-        geom_hline(y = cutoff_val)
+        geom_hline(y = cutoff_val) +
+        theme_gray()
 }
 
 # Compare junction overlap at different clone count cutoffs
@@ -76,13 +80,14 @@ compare_jxn_dists <- function(imgt_jxns, mixcr_jxns, max_cutoff = 40) {
 
 
 # Plot overlap values over range of clone count cutoffs
-plot_jxn_comp <- function(compare_jxns, cutoff_line = 25) {
-    compare_clns_melt <- melt(compare_jxns, id.vars = "clone_count", 
+plot_jxn_comp <- function(compare_jxns, cutoff_line = 20) {
+    compare_jxns_melt <- melt(compare_jxns, id.vars = "clone_count", 
                               variable.name = "jxn_source", 
                               value.name = "num_junctions")
     
     compare_jxns_melt %>% 
         ggplot(aes(x = clone_count, y = num_junctions)) +
         geom_line(aes(colour = jxn_source), size = 1.5) +
-        geom_vline(x = cutoff_line)
+        geom_vline(x = cutoff_line) +
+        theme_gray()
 }

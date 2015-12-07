@@ -20,41 +20,39 @@ construct_tcrs <- function(jxns_df) {
 
 build_sankey_network <- function(tcrs_all, chain = c("A", "B", "both")) {
     tcrs_all <- tcrs_all %>% 
-        mutate(tcr = str_c(trav_gene, trbv_gene, sep = ":"),
-               value = ifelse(tcr_source == "IMGT", 
+        mutate(value = ifelse(tcr_source == "IMGT", 
                               as.numeric(str_extract(lib_id, "[0-9]+")) + 0.1, 
                               as.numeric(str_extract(lib_id, "[0-9]+")) + 0.2))
     
     if (chain == "A") {
         tcr_sankey <- tcrs_all %>% 
             select(source = lib_id, target = trav_gene, value) %>% 
+            distinct() %>% 
             bind_rows(tcrs_all %>% 
-                          select(source = trav_gene, target = trav_jxn, value))
+                          select(source = trav_gene, target = trav_jxn, value) %>% 
+                          distinct())
     } else if (chain == "B") {
         tcr_sankey <- tcrs_all %>% 
             select(source = lib_id, target = trbv_gene, value) %>% 
+            distinct() %>% 
             bind_rows(tcrs_all %>% 
-                          select(source = trbv_gene, target = trbv_jxn, value))
+                          select(source = trbv_gene, target = trbv_jxn, value) %>% 
+                          distinct())
     } else if (chain == "both") {
         tcr_sankey <- tcrs_all %>% 
             select(source = lib_id, target = trav_gene, value) %>% 
+            distinct() %>% 
             bind_rows(tcrs_all %>% 
-                          select(source = lib_id, target = trbv_gene, value)) %>% 
+                          select(source = lib_id, target = trbv_gene, value) %>% 
+                          distinct()) %>% 
             bind_rows(tcrs_all %>% 
-                          select(source = trav_gene, target = trav_jxn, value)) %>% 
+                          select(source = trav_gene, target = trav_jxn, value) %>% 
+                          distinct()) %>% 
             bind_rows(tcrs_all %>% 
-                          select(source = trbv_gene, target = trbv_jxn, value))
-    } else {
-        tcr_sankey <- tcrs_all %>% 
-            mutate(lib_id = str_c(lib_id, "[TRAV]", sep = " ")) %>% 
-            select(source = lib_id, target = trav_gene, value) %>% 
-            bind_rows(tcrs_all %>% 
-                          select(source = trav_gene, target = trbv_gene, value)) %>% 
-            bind_rows(tcrs_all %>% 
-                          mutate(lib_id = str_c(lib_id, "[TRBV]", sep = " ")) %>% 
-                          select(source = trbv_gene, target = lib_id, value)) 
-    }
-    
+                          select(source = trbv_gene, target = trbv_jxn, value) %>% 
+                          distinct()) %>% 
+            distinct()
+    } 
 }
 
 build_sankey_plot <- function(tcr_sankey, sankey_height = 600) {
