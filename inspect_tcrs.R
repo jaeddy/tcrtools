@@ -1,6 +1,6 @@
 
 # Function to combine TRAV and TRBV genes into TCRs
-construct_tcrs <- function(jxns_df) {
+construct_tcrs <- function(jxns_df, any = FALSE) {
 
     trav_df <- jxns_df %>% 
         filter(str_detect(v_gene, "TRAV")) %>% 
@@ -14,13 +14,22 @@ construct_tcrs <- function(jxns_df) {
         rename(trbv_gene = v_gene,
                trbv_jxn = junction)
 
-    tcr_df <- inner_join(trav_df, trbv_df, by = c("lib_id" = "lib_id"))
+    if (!any) {
+        tcr_df <- inner_join(trav_df, trbv_df, by = "lib_id")
+    } else {
+        tcr_df <- full_join(trav_df, trbv_df, by = "lib_id") %>% 
+            mutate(trav_gene = ifelse(is.na(trav_gene), "no_trav_gene", trav_gene),
+                   trbv_gene = ifelse(is.na(trbv_gene), "no_trbv_gene", trbv_gene),
+                   trav_jxn = ifelse(is.na(trav_jxn), "no_trav_jxn", trav_jxn),
+                   trbv_jxn = ifelse(is.na(trbv_jxn), "no_trbv_jxn", trbv_jxn))
+    }
     return(tcr_df)
 }
 
 build_sankey_network <- function(tcrs_all, chain = c("A", "B", "both")) {
+    sources <- tcrs_all$tcr_source
     tcrs_all <- tcrs_all %>% 
-        mutate(value = ifelse(tcr_source == "IMGT", 
+        mutate(value = ifelse(tcr_source == sources[1], 
                               as.numeric(str_extract(lib_id, "[0-9]+")) + 0.1, 
                               as.numeric(str_extract(lib_id, "[0-9]+")) + 0.2))
     
