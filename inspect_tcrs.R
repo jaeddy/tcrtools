@@ -5,13 +5,13 @@ construct_tcrs <- function(jxns_df, any = FALSE) {
     trav_df <- jxns_df %>% 
         filter(str_detect(v_gene, "TRAV")) %>% 
         select(-j_gene) %>% 
-        rename(trav_gene = v_gene, 
+        dplyr::rename(trav_gene = v_gene, 
                trav_jxn = junction)
     
     trbv_df <- jxns_df %>% 
         filter(str_detect(v_gene, "TRBV")) %>% 
         select(-j_gene) %>% 
-        rename(trbv_gene = v_gene,
+        dplyr::rename(trbv_gene = v_gene,
                trbv_jxn = junction)
 
     if (!any) {
