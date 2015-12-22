@@ -62,22 +62,24 @@ filter_imgt_jxns <- function(imgt_jxns, min_length = 6) {
 # from one file to newfile. 2) grep contents of all files and 3) append them to
 # newfile
 combine_mixcr_outputs <- function(mixcr_dir, output_dir, project) {
-    # Select one file to grab the column headers
-    mixcr_tmp_file <- data_frame(
-        file = list.files(mixcr_dir, full.names = TRUE)) %>% 
-        mutate(size = file.size(file)) %>% 
-        filter(str_detect(str_to_lower(file), "clns.txt"),
-               size > 0) %>% # make sure not to select empty files
-        slice(1) %>% 
-        select(file) %>% 
-        unlist()
-    
+
     # Build and use Unix commands
     mixcr_combined_file <- file.path(output_dir, 
                                      paste(project, "compiled_mixcr_output.txt", 
                                            sep = "_"))
     
     if (!file.exists(mixcr_combined_file)) {
+        
+        # Select one file to grab the column headers
+        mixcr_tmp_file <- data_frame(
+            file = list.files(mixcr_dir, full.names = TRUE)) %>% 
+            mutate(size = file.size(file)) %>% 
+            filter(str_detect(str_to_lower(file), "clns.txt"),
+                   size > 0) %>% # make sure not to select empty files
+            slice(1) %>% 
+            select(file) %>% 
+            unlist()
+        
         header_cmd <- sprintf("head -1 %s > %s", mixcr_tmp_file, mixcr_combined_file)
         system(header_cmd)
         
