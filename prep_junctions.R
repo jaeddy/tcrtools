@@ -14,7 +14,7 @@ compile_imgt_output <- function(summary_file, output_dir, project) {
             filter(Functionality == "productive") %>% 
             select(Sequence.ID, V.GENE.and.allele, J.GENE.and.allele, 
                    AA.JUNCTION) %>% 
-            transmute(lib_id = str_extract(Sequence.ID, "lib[0-9]+"),
+            transmute(lib_id = str_extract(Sequence.ID, "lib|SRR[0-9]+"),
                       v_gene = str_extract(V.GENE.and.allele, 
                                            "TR.*?(?=(\\*))"),
                       j_gene = str_extract(J.GENE.and.allele, 
@@ -97,9 +97,10 @@ format_mixcr_jxns_old <- function(mixcr_combined_file) {
     mixcr_jxns <- read.delim(mixcr_combined_file)
     print(nrow(mixcr_jxns))
     
+    print(head(mixcr_jxns))
     # Extract & format key variables
     mixcr_jxns <- mixcr_jxns %>% 
-        transmute(lib_id = as.character(str_match(Clone.count, "lib[0-9]+")),
+        transmute(lib_id = as.character(str_match(Clone.count, "(lib|SRR)[0-9]+")),
                   cln_count = as.numeric(str_match(Clone.count, "(?<=:)[0-9]+")),
                   v_gene = str_extract(All.V.hits,
                                       "TR[A-Z]+[0-9]*(\\-[0-9])*(DV[0-9]+)*"),
@@ -120,8 +121,8 @@ format_mixcr_jxns <- function(mixcr_combined_file) {
 
     # Extract & format key variables
     mixcr_jxns <- mixcr_jxns %>% 
-        transmute(lib_id = as.character(str_match(`Clone count`, "lib[0-9]+")),
-                  cln_count = as.numeric(str_match(`Clone count`, "(?<=:)[0-9]+")),
+        transmute(lib_id = as.character(str_extract(`Clone count`, "(lib|SRR)[0-9]+")),
+                  cln_count = as.numeric(str_extract(`Clone count`, "(?<=:)[0-9]+")),
                   v_gene = str_extract(`All V hits`,
                                        "TR[A-Z]+[0-9]*(\\-[0-9])*(DV[0-9]+)*"),
                   v_gene_score = str_extract(`All V hits`, "(?<=\\()[0-9]+") %>% 
@@ -139,11 +140,13 @@ format_mixcr_jxns <- function(mixcr_combined_file) {
 filter_mixcr_jxns <- function(mixcr_jxns, min_count = 1, min_length = 6) {
     
     mixcr_jxns <- mixcr_jxns %>% 
-        filter(str_detect(v_gene, "^((?![C-G]).)*$"),
-               str_detect(j_gene, "^((?![C-G]).)*$"),
-               str_detect(junction, "^C"),
-               str_detect(junction, "^((?!(\\*|_)).)*$"),
-               !duplicated(.[, c(1, 3:5)]),
+        filter(str_detect(v_gene, "^((?![C-G]).)*$"), # TRA/B only
+               str_detect(j_gene, "^((?![C-G]).)*$"), # TRA/B only
+               str_extract(v_gene, "(?<=TR)[A-Z]") == 
+                   str_extract(j_gene, "(?<=TR)[A-Z]"), # segments must match
+               str_detect(junction, "^C"), # jxn AA cannot start with C
+               str_detect(junction, "^((?!(\\*|_)).)*$"), # functional only
+               !duplicated(.[, c(1, 3:5)]), # remove dups
                cln_count >= min_count,
                str_length(junction) > min_length)
     
