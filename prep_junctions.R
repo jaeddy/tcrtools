@@ -127,11 +127,33 @@ format_mixcr_jxns <- function(mixcr_combined_file) {
                                        "TR[A-Z]+[0-9]*(\\-[0-9])*(DV[0-9]+)*"),
                   v_gene_score = str_extract(`All V hits`, "(?<=\\()[0-9]+") %>% 
                       as.numeric(),
+                  v_align = `All V alignment`,
                   j_gene = str_extract(`All J hits`, 
                                        "TR[A-Z]+[0-9]*(\\-[0-9][A-Z]*)*"),
+                  j_align = `All J alignment`,
                   j_gene_score = str_extract(`All J hits`, "(?<=\\()[0-9]+") %>% 
                       as.numeric(),
-                  junction = as.character(`AA. seq. CDR3`))
+                  junction = as.character(`AA. seq. CDR3`)) %>% 
+        rowwise() %>% 
+        mutate(v_region_nt_overlap = str_split(v_align, pattern = "\\|") %>% 
+                   unlist() %>% 
+                   .[length(.) - 2],
+               v_region_align_score = str_split(v_align, pattern = "\\|") %>% 
+                   unlist() %>% 
+                   .[length(.)],
+               j_region_nt_overlap = str_split(j_align, pattern = "\\|") %>% 
+                   unlist() %>% 
+                   .[length(.) - 2],
+               j_region_align_score = str_split(j_align, pattern = "\\|") %>% 
+                   unlist() %>% 
+                   .[length(.)]) %>% 
+        select(one_of(c("lib_id", "cln_count", "v_gene", "v_gene_score",
+                        "v_align", "v_region_nt_overlap",
+                        "v_region_align_score",
+                        "j_gene", "j_gene_score",
+                        "j_align", "j_region_nt_overlap",
+                        "j_region_align_score",
+                        "junction")))
     
     return(mixcr_jxns)
 }
