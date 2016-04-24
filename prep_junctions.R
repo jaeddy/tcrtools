@@ -159,18 +159,18 @@ format_mixcr_jxns <- function(mixcr_combined_file) {
 }
 
 # Function to filter MiXCR junctions
-filter_mixcr_jxns <- function(mixcr_jxns, min_count = 1, min_length = 6) {
+filter_mixcr_jxns <- function(mixcr_jxns, min_count = 1, min_length = 4) {
     
     mixcr_jxns <- mixcr_jxns %>% 
-        filter(str_detect(v_gene, "^((?![C-G]).)*$"), # TRA/B only
-               str_detect(j_gene, "^((?![C-G]).)*$"), # TRA/B only
-               str_extract(v_gene, "(?<=TR)[A-Z]") == 
-                   str_extract(j_gene, "(?<=TR)[A-Z]"), # segments must match
-               str_detect(junction, "^C"), # jxn AA cannot start with C
+        filter(str_detect(v_gene, "TR[A-B]"), # TRA/B only
+               str_detect(j_gene, "TR[A-B]"), # TRA/B only
+               str_extract(v_gene, "(?<=TR)[A-B]") == 
+                   str_extract(j_gene, "(?<=TR)[A-B]"), # segments must match
+               str_detect(junction, "^C"), # jxn AA must start with C
                str_detect(junction, "^((?!(\\*|_)).)*$"), # functional only
-               !duplicated(.[, c(1, 3:5)]), # remove dups
+#                !duplicated(.[, c(1, 3:5)]), # remove dups
                cln_count >= min_count,
-               str_length(junction) > min_length)
+               str_length(junction) >= min_length)
     
     return(mixcr_jxns)
 }
