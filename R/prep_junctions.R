@@ -1,36 +1,8 @@
 ### mixcr analysis
 
-# Function to compile and format IMGT results using R
-compile_imgt_output <- function(summary_file, output_dir, project) {
-    # Build and use Unix commands
-    imgt_file <- file.path(output_dir, 
-                           paste(project, "compiled_imgt_output.txt", 
-                                 sep = "_"))
-    
-    if (!file.exists(imgt_file)) {
-        imgt_summary <- read.delim(summary_file, stringsAsFactors = FALSE)
-        
-        imgt_compiled <- imgt_summary %>% 
-            filter(Functionality == "productive") %>% 
-            select(Sequence.ID, V.GENE.and.allele, J.GENE.and.allele, 
-                   AA.JUNCTION) %>% 
-            transmute(lib_id = str_extract(Sequence.ID, "lib|SRR[0-9]+"),
-                      v_gene = str_extract(V.GENE.and.allele, 
-                                           "TR.*?(?=(\\*))"),
-                      j_gene = str_extract(J.GENE.and.allele, 
-                                           "TR.*?(?=(\\*))"),
-                      junction = AA.JUNCTION)
-        
-        write.table(imgt_compiled, imgt_file, 
-                    sep = "\t", quote = FALSE, row.names = FALSE)
-    }
-    
-    return(imgt_file)
-}
-
-# Function to format IMGT results using R
+# function to format IMGT results (old)
 format_imgt_jxns <- function(imgt_file) {
-    # Read in IMGT junctions
+    # read in IMGT junctions
     imgt_jxns <- read_delim(imgt_file, delim = "\t")
     
     if ("libID" %in% names(imgt_jxns)) {
