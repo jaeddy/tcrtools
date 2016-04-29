@@ -72,7 +72,8 @@ read_imgt <- function(file_list = NULL, folder = NULL,
     }) %>% 
         bind_rows()
     
-    return(jxn_df)
+    return(jxn_df %>% 
+               arrange(sample))
 }
 
 # read MiXCR results from file
@@ -145,11 +146,12 @@ read_mixcr <- function(file_list = NULL, folder = NULL,
         bind_rows() %>% 
         select(one_of("sample", setdiff(names(.), "sample")))
     
-    return(jxn_df)
+    return(jxn_df %>% 
+               arrange(sample))
 }
 
 
-### DEPRECATED
+### DEPRECATED ###
 
 # Function to combine individual * mixcr_clns.txt files using unix: 1) add header
 # from one file to newfile. 2) grep contents of all files and 3) append them to
