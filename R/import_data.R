@@ -3,6 +3,7 @@ library(stringr)
 library(dplyr)
 library(parallel)
 
+# clean column names of data frame
 clean_headers <- function(df) {
     headers <- names(df)
     headers <- str_to_lower(headers)
@@ -15,6 +16,7 @@ clean_headers <- function(df) {
     return(df)
 }
 
+# read IMGT results Summary from file
 read_imgt_summary <- function(file) {
     imgt_df <- read_tsv(file) %>% 
         clean_headers() %>% 
@@ -23,6 +25,7 @@ read_imgt_summary <- function(file) {
     return(imgt_df)
 }
 
+# parse raw IMGT clonotype results from Summary file
 parse_imgt_summary <- function(imgt_df) {
     imgt_df %>% 
         select(sequence_id, v_gene_and_allele, v_region_score, v_region_identity_nt,
@@ -42,7 +45,18 @@ parse_imgt_summary <- function(imgt_df) {
     
 }
 
-read_imgt <- function(file_list, sample_regex = "(lib|SRR)[0-9]+") {
+# read and parse IMGT results from list of archive (.txz) files
+read_imgt <- function(file_list = NULL, folder = NULL, 
+                      sample_regex = "(lib|SRR)[0-9]+") {
+    if(is.null(file_list) & is.null(folder)) {
+        stop("Input must be provided for either `file_list` or `folder` argument.")
+    }
+    
+    if(!is.null(folder)) {
+        file_list <- list.files(folder, full.names = TRUE) %>% 
+            .[str_detect(tolower(.), ".txz")]
+    }
+    
     if(!is.list(file_list)) {
         file_list <- as.list(file_list)
     }
@@ -61,12 +75,13 @@ read_imgt <- function(file_list, sample_regex = "(lib|SRR)[0-9]+") {
     return(jxn_df)
 }
 
-
+# read MiXCR results from file
 read_mixcr_clones <- function(file) {
     mixcr_df <- read_delim(file, delim = "\t") %>% 
         clean_headers()
 }
 
+# parse raw MiXCR clonotype results
 parse_mixcr_clones <- function(mixcr_df) {
     mixcr_df %>% 
         transmute(cln_count = clone_count,
@@ -104,7 +119,18 @@ parse_mixcr_clones <- function(mixcr_df) {
                         "junction")))
 }
 
-read_mixcr <- function(file_list, sample_regex = "(lib|SRR)[0-9]+") {
+# read and parse MiXCR results from list of files
+read_mixcr <- function(file_list = NULL, folder = NULL, 
+                       sample_regex = "(lib|SRR)[0-9]+") {
+    if(is.null(file_list) & is.null(folder)) {
+        stop("Input must be provided for either `file_list` or `folder` argument.")
+    }
+    
+    if(!is.null(folder)) {
+        file_list <- list.files(folder, full.names = TRUE) %>% 
+            .[str_detect(tolower(.), "clns.txt")]
+    }
+    
     if(!is.list(file_list)) {
         file_list <- as.list(file_list)
     }
