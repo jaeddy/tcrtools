@@ -30,7 +30,8 @@ parse_imgt_summary <- function(imgt_df) {
     imgt_df %>% 
         select(sequence_id, v_gene_and_allele, v_region_score, v_region_identity_nt,
                j_gene_and_allele, j_region_score, j_region_identity_nt,
-               aa_junction, sequence) %>% 
+               aa_junction, 
+               functionality, functionality_comment, junction_frame) %>% 
         mutate(v_gene = str_extract(v_gene_and_allele, 
                                        "TR.*?(?=(\\*))"),
                v_region_score = as.integer(v_region_score),
@@ -41,7 +42,8 @@ parse_imgt_summary <- function(imgt_df) {
         select(one_of("sequence_id", 
                       "v_gene", "v_region_score", "v_region_identity_nt",
                       "j_gene", "j_region_score", "j_region_identity_nt",
-                      "junction", "sequence"))
+                      "junction",
+                      "functionality", "functionality_comment", "junction_frame"))
     
 }
 
@@ -112,11 +114,10 @@ parse_mixcr_clones <- function(mixcr_df) {
                    unlist() %>% 
                    .[length(.)] %>% 
                    as.integer()) %>% 
-        select(one_of(c( "cln_count", "v_gene", "v_gene_score",
-                        "v_region_identity_nt", "v_region_score",
+        select(one_of(c("cln_count", "v_gene", "v_gene_score",
+                        "v_region_score", "v_region_identity_nt", 
                         "j_gene", "j_gene_score",
-                        "j_region_identity_nt",
-                        "j_region_score",
+                        "j_region_score", "j_region_identity_nt", 
                         "junction")))
 }
 
