@@ -27,7 +27,7 @@ filter_jxns <- function(jxn_df, min_length = 4, min_count = 1,
     
     if(productive) {
         jxn_df <- jxn_df %>% 
-            filter(str_detect(junction, "^((?!(\\*|_)).)*$")) # productive only
+            filter(str_detect(junction, "^((?!(\\*|_|#)).)*$")) # productive only
     }
     
     if("cln_count" %in% names(jxn_df)) {
