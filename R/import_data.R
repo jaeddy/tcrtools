@@ -1,6 +1,7 @@
 library(readr)
 library(stringr)
 library(dplyr)
+library(purrr)
 library(parallel)
 
 # clean column names of data frame
