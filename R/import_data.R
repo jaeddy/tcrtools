@@ -103,19 +103,15 @@ parse_mixcr_clones <- function(mixcr_df) {
                   junction = as.character(aa_seq_cdr3)) %>% 
         rowwise() %>% 
         mutate(v_cd3_part_identity_nt = str_split(v_align, pattern = "\\|") %>% 
-                   unlist() %>% 
-                   .[length(.) - 2],
+                   map_int(function(x) {as.integer(x[length(x) - 2]) -
+                           as.integer(x[length(x) - 3])}),
                v_cd3_part_score = str_split(v_align, pattern = "\\|") %>% 
-                   unlist() %>% 
-                   .[length(.)] %>% 
-                   as.integer(),
+                   map_dbl(function(x) {as.numeric(x[length(x)])}),
                j_cd3_part_identity_nt = str_split(j_align, pattern = "\\|") %>% 
-                   unlist() %>% 
-                   .[length(.) - 2],
+                   map_int(function(x) {as.integer(x[length(x) - 2]) -
+                           as.integer(x[length(x) - 3])}),
                j_cd3_part_score = str_split(j_align, pattern = "\\|") %>% 
-                   unlist() %>% 
-                   .[length(.)] %>% 
-                   as.integer()) %>% 
+                   map_dbl(function(x) {as.numeric(x[length(x)])})) %>% 
         select(one_of(c("cln_count", "v_gene", "v_region_score",
                         "v_cd3_part_score", "v_cd3_part_identity_nt", 
                         "j_gene", "j_region_score",
