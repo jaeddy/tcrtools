@@ -11,8 +11,13 @@ filter_jxns <- function(jxn_df, min_length = 4, min_count = 1,
         filter(str_detect(v_gene, "^((?![C-G]).)*$"), # TRA/B only
                str_detect(j_gene, "^((?![C-G]).)*$"), # TRA/B only
                str_extract(v_gene, "(?<=TR)[A-B]") == 
-                   str_extract(j_gene, "(?<=TR)[A-B]"), # segments must match
-               str_length(junction) >= min_length)
+                   str_extract(j_gene, "(?<=TR)[A-B]")) # segments must match
+               
+    if(min_length > 0) {
+        jxn_df <- jxn_df %>% 
+            filter(str_length(junction) >= min_length)
+    }
+
     
     if(productive | conserved) {
         jxn_df <- jxn_df %>% 
