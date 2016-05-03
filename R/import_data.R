@@ -90,34 +90,36 @@ parse_mixcr_clones <- function(mixcr_df) {
         transmute(cln_count = clone_count,
                   v_gene = str_extract(all_v_hits,
                                        "TR[A-Z]+[0-9]*(\\-[0-9])*(DV[0-9]+)*"),
-                  v_gene_score = str_extract(all_v_hits, "(?<=\\()[0-9]+") %>% 
+                  # note: not currently possible to get region overlap with
+                  # current version/parameters we use for MiXCR
+                  v_region_score = str_extract(all_v_hits, "(?<=\\()[0-9]+") %>% 
                       as.integer(),
                   v_align = all_v_alignment,
                   j_gene = str_extract(all_j_hits, 
                                        "TR[A-Z]+[0-9]*(\\-[0-9][A-Z]*)*"),
                   j_align = all_j_alignment,
-                  j_gene_score = str_extract(all_j_hits, "(?<=\\()[0-9]+") %>% 
+                  j_region_score = str_extract(all_j_hits, "(?<=\\()[0-9]+") %>% 
                       as.integer(),
                   junction = as.character(aa_seq_cdr3)) %>% 
         rowwise() %>% 
-        mutate(v_region_identity_nt = str_split(v_align, pattern = "\\|") %>% 
+        mutate(v_cd3_part_identity_nt = str_split(v_align, pattern = "\\|") %>% 
                    unlist() %>% 
                    .[length(.) - 2],
-               v_region_score = str_split(v_align, pattern = "\\|") %>% 
+               v_cd3_part_score = str_split(v_align, pattern = "\\|") %>% 
                    unlist() %>% 
                    .[length(.)] %>% 
                    as.integer(),
-               j_region_identity_nt = str_split(j_align, pattern = "\\|") %>% 
+               j_cd3_part_identity_nt = str_split(j_align, pattern = "\\|") %>% 
                    unlist() %>% 
                    .[length(.) - 2],
-               j_region_score = str_split(j_align, pattern = "\\|") %>% 
+               j_cd3_part_score = str_split(j_align, pattern = "\\|") %>% 
                    unlist() %>% 
                    .[length(.)] %>% 
                    as.integer()) %>% 
-        select(one_of(c("cln_count", "v_gene", "v_gene_score",
-                        "v_region_score", "v_region_identity_nt", 
-                        "j_gene", "j_gene_score",
-                        "j_region_score", "j_region_identity_nt", 
+        select(one_of(c("cln_count", "v_gene", "v_region_score",
+                        "v_cd3_part_score", "v_cd3_part_identity_nt", 
+                        "j_gene", "j_region_score",
+                        "j_cd3_part_score", "j_cd3_part_identity_nt", 
                         "junction")))
 }
 
