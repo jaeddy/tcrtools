@@ -36,7 +36,7 @@ filter_jxns <- function(jxn_df, min_length = 4, min_count = 1,
     }
     
     return(jxn_df %>% 
-               distinct(sample, v_gene, j_gene, junction))
+               distinct(sample, v_gene, j_gene, junction, .keep_all = TRUE))
 }
 
 
