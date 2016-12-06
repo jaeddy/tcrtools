@@ -8,8 +8,8 @@ library(dplyr)
 filter_jxns <- function(jxn_df, min_length = 4, min_count = 1,
                         productive = TRUE, conserved = TRUE) {
     jxn_df <- jxn_df %>% 
-        filter(str_detect(v_gene, "^((?![C-G]).)*$"), # TRA/B only
-               str_detect(j_gene, "^((?![C-G]).)*$"), # TRA/B only
+        filter(str_detect(v_gene, "(?<=TR)[A-B]"), # TRA/B only
+               str_detect(j_gene, "(?<=TR)[A-B]"), # TRA/B only
                str_extract(v_gene, "(?<=TR)[A-B]") == 
                    str_extract(j_gene, "(?<=TR)[A-B]")) # segments must match
                
